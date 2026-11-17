@@ -1,122 +1,140 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+
+import { useState, useEffect } from "react";
+import { auth } from "./firebase";
+
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged
+} from "firebase/auth";
+
+import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0)
+  // Store user information
+  const [user, setUser] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
+  // Store input values
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  // Store messages
+  const [message, setMessage] = useState("");
+
+  // Check authentication status
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setAuthReady(true);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Register new user
+  async function register() {
+    try {
+      await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+      setMessage("Registration successful!");
+      setPassword("");
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
+
+  // Login existing user
+  async function login() {
+    try {
+      await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+      setMessage("Login successful!");
+      setPassword("");
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
+
+  // Logout user
+  async function logout() {
+    try {
+      await signOut(auth);
+      setMessage("Logged out successfully!");
+      setEmail("");
+      setPassword("");
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
+
+  // Wait for Firebase to restore login state
+  if (!authReady) {
+    return <main className="container">Loading...</main>;
+  }
+
+  // Show login and registration page
+  if (!user) {
+    return (
+      <main className="container">
+        <h1>Firebase Authentication</h1>
+
+        <p>Register or login to your account</p>
+
+        <input
+          type="email"
+          placeholder="Enter your email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+
+        <input
+          type="password"
+          placeholder="Enter your password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+
         <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+          <button onClick={login}>Login</button>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+          <button onClick={register}>Register</button>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        <p>{message}</p>
+      </main>
+    );
+  }
+
+  // Show page after successful login
+  return (
+    <main className="container">
+      <h1>Welcome to My Task Manager</h1>
+
+      <p>You are successfully logged in!</p>
+
+      <p>
+        Email: <strong>{user.email}</strong>
+      </p>
+
+      <p>
+        User ID: <strong>{user.uid}</strong>
+      </p>
+
+      <button onClick={logout}>Logout</button>
+
+      <p>{message}</p>
+    </main>
+  );
 }
 
-export default App
+export default App;
